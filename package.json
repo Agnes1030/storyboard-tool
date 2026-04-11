@@ -1,0 +1,13 @@
+{
+  "name": "storyboard-ai",
+  "version": "0.1.0",
+  "description": "AI漫剧分镜脚本生成工具",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "ANTHROPIC_API_KEY=你的Key node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

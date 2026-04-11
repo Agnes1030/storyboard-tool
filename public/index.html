@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>分镜AI — 漫剧创作工作台</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --teal:#1D9E75;--teal-light:#E1F5EE;--teal-mid:#5DCAA5;--teal-dark:#0F6E56;
+  --blue-light:#E6F1FB;--blue-dark:#185FA5;--blue-mid:#B5D4F4;
+  --purple-light:#EEEDFE;--purple:#7F77DD;
+  --amber-light:#FAEEDA;--amber:#EF9F27;
+  --coral-light:#FAECE7;--coral:#D85A30;
+  --text:#1a1a1a;--text-muted:#6b7280;--text-hint:#9ca3af;
+  --bg:#fff;--bg-2:#f9fafb;--bg-3:#f3f4f6;
+  --border:#e5e7eb;--border-mid:#d1d5db;
+  --danger:#dc2626;--danger-light:#fef2f2;
+  --r:10px;--r-sm:6px;
+}
+body{font-family:-apple-system,'PingFang SC','Hiragino Sans GB',sans-serif;background:var(--bg-2);color:var(--text);font-size:14px;line-height:1.6;min-height:100vh}
+
+/* ── Topbar ── */
+.topbar{background:#fff;border-bottom:1px solid var(--border);padding:0 24px;height:52px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20}
+.logo-mark{width:28px;height:28px;background:var(--teal);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-mark svg{width:15px;height:15px;fill:#fff}
+.brand{font-size:15px;font-weight:600}.brand em{color:var(--teal);font-style:normal}
+.vtag{font-size:11px;padding:2px 8px;background:var(--teal-light);color:var(--teal-dark);border-radius:20px;font-weight:500}
+.topbar-r{margin-left:auto;font-size:12px;color:var(--text-hint)}
+
+/* ── Pipeline ── */
+.pipeline{display:flex;align-items:center;padding:0 24px;background:#fff;border-bottom:1px solid var(--border);overflow-x:auto}
+.pipe-step{display:flex;align-items:center;gap:8px;padding:12px 20px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;font-size:13px;font-weight:500;color:var(--text-muted);transition:color .15s,border-color .15s;user-select:none}
+.pipe-step:hover:not(.active){color:var(--text)}
+.pipe-step.active{color:var(--teal);border-bottom-color:var(--teal)}
+.pipe-num{width:20px;height:20px;border-radius:50%;background:var(--bg-3);color:var(--text-hint);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s}
+.pipe-step.active .pipe-num{background:var(--teal);color:#fff}
+.pipe-step.done .pipe-num{background:var(--teal-light);color:var(--teal-dark)}
+.pipe-step.done{color:var(--teal-dark)}
+.pipe-arrow{color:var(--border-mid);font-size:14px;flex-shrink:0;padding:0 2px}
+
+/* ── Layout ── */
+.main{max-width:1200px;margin:0 auto;padding:20px 20px 80px}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.two-col{display:grid;grid-template-columns:380px 1fr;gap:16px;align-items:start}
+@media(max-width:820px){.two-col{grid-template-columns:1fr}}
+
+/* ── Cards ── */
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.card-head{padding:11px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.card-title{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em}
+.card-body{padding:16px}
+
+/* ── Buttons ── */
+.ghost-btn{font-size:12px;color:var(--teal);background:none;border:1px solid var(--teal-mid);border-radius:var(--r-sm);padding:4px 10px;cursor:pointer;font-family:inherit;transition:background .12s;white-space:nowrap}
+.ghost-btn:hover{background:var(--teal-light)}
+.ghost-btn.secondary{color:var(--text-muted);border-color:var(--border-mid)}
+.ghost-btn.secondary:hover{background:var(--bg-3);color:var(--text)}
+.ghost-btn.danger{color:var(--danger);border-color:#fca5a5}
+.ghost-btn.danger:hover{background:var(--danger-light)}
+.ghost-btn.active-view{background:var(--teal-light);color:var(--teal-dark);border-color:var(--teal-mid)}
+.primary-btn{padding:10px 20px;font-size:13px;font-weight:600;border:none;border-radius:var(--r-sm);background:var(--teal);color:#fff;cursor:pointer;transition:opacity .15s,transform .1s;font-family:inherit;display:flex;align-items:center;gap:7px;white-space:nowrap}
+.primary-btn:hover{opacity:.88}.primary-btn:active{transform:scale(.98)}.primary-btn:disabled{opacity:.45;cursor:not-allowed}
+.full-btn{display:block;width:calc(100% - 32px);margin:12px 16px;padding:11px;font-size:14px;font-weight:600;border:none;border-radius:var(--r-sm);background:var(--teal);color:#fff;cursor:pointer;transition:opacity .15s,transform .1s;font-family:inherit}
+.full-btn:hover{opacity:.88}.full-btn:active{transform:scale(.98)}.full-btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-inner{display:flex;align-items:center;justify-content:center;gap:8px}
+.spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Forms ── */
+input[type=text],input[type=number],select,.field-input{font-size:13px;padding:7px 10px;border:1px solid var(--border-mid);border-radius:var(--r-sm);background:#fff;color:var(--text);font-family:inherit;outline:none;width:100%;transition:border-color .15s}
+input[type=text]:focus,input[type=number]:focus,select:focus,.field-input:focus{border-color:var(--teal-mid)}
+textarea{display:block;width:100%;border:none;outline:none;resize:none;font-size:13.5px;line-height:1.75;color:var(--text);background:#fff;font-family:inherit}
+textarea::placeholder{color:var(--text-hint)}
+textarea.field-ta{border:1px solid var(--border-mid);border-radius:var(--r-sm);padding:8px 10px;resize:vertical}
+textarea.field-ta:focus{border-color:var(--teal-mid)}
+.field-label{font-size:11px;color:var(--text-muted);font-weight:500;margin-bottom:4px;display:block}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.field-row.full{grid-template-columns:1fr}
+.field-group{display:flex;flex-direction:column}
+
+/* ── Tags ── */
+.tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap}
+.tag-teal{background:var(--teal-light);color:var(--teal-dark)}
+.tag-blue{background:var(--blue-light);color:var(--blue-dark)}
+.char-count-badge{font-size:11px;padding:2px 7px;background:var(--teal-light);color:var(--teal-dark);border-radius:20px;font-weight:500}
+
+/* ── Progress / Error ── */
+.error-box{margin:10px 16px 0;padding:10px 14px;border-radius:var(--r-sm);background:var(--danger-light);color:var(--danger);font-size:13px;display:none}
+.progress-wrap{height:3px;background:var(--border);display:none}
+.progress-fill{height:100%;background:var(--teal);width:0%;transition:width .3s ease}
+
+/* ══════════ TAB 1: 剧本创作 ══════════ */
+.write-layout{display:grid;grid-template-columns:300px 1fr;gap:16px;align-items:start}
+@media(max-width:820px){.write-layout{grid-template-columns:1fr}}
+.mode-tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.mode-tab{padding:6px 14px;font-size:12px;font-weight:500;border:1px solid var(--border-mid);border-radius:20px;cursor:pointer;background:#fff;color:var(--text-muted);font-family:inherit;transition:all .15s}
+.mode-tab.active{background:var(--teal);color:#fff;border-color:var(--teal)}
+.mode-tab:hover:not(.active){border-color:var(--teal-mid);color:var(--teal)}
+.config-section{margin-bottom:14px}
+.genre-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.genre-chip{padding:6px 10px;font-size:12px;border:1px solid var(--border);border-radius:var(--r-sm);cursor:pointer;background:#fff;color:var(--text-muted);font-family:inherit;transition:all .15s;text-align:center}
+.genre-chip.active{background:var(--teal-light);color:var(--teal-dark);border-color:var(--teal-mid);font-weight:500}
+.genre-chip:hover:not(.active){border-color:var(--teal-mid)}
+.tone-row{display:flex;gap:6px;flex-wrap:wrap}
+.tone-chip{padding:4px 12px;font-size:12px;border:1px solid var(--border);border-radius:20px;cursor:pointer;background:#fff;color:var(--text-muted);font-family:inherit;transition:all .15s}
+.tone-chip.active{background:var(--purple-light);color:#3C3489;border-color:#AFA9EC;font-weight:500}
+.tone-chip:hover:not(.active){border-color:#AFA9EC}
+.script-toolbar{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg-2)}
+.script-area{width:100%;min-height:500px;padding:16px;font-size:13.5px;line-height:1.9;color:var(--text);background:#fff;font-family:inherit;border:none;outline:none;resize:vertical}
+.script-wc{font-size:11px;color:var(--text-hint);margin-left:auto}
+.send-to-storyboard{display:flex;align-items:center;gap:8px;padding:12px 16px;border-top:1px solid var(--border);background:var(--bg-2);justify-content:flex-end}
+
+/* ══════════ TAB 2: 分镜 ══════════ */
+.config-bar{padding:10px 16px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--bg-2)}
+.config-label{font-size:12px;color:var(--text-muted);flex-shrink:0}
+.storyboard-input{width:100%;min-height:240px;padding:14px 16px}
+.output-section{display:none;margin-top:16px}
+.output-section.visible{display:block}
+
+/* View toggle */
+.view-toggle{display:flex;gap:4px}
+.view-toggle button{padding:3px 10px;font-size:12px;border:1px solid var(--border-mid);background:#fff;color:var(--text-muted);border-radius:var(--r-sm);cursor:pointer;font-family:inherit;transition:all .12s}
+.view-toggle button.active{background:var(--teal-light);color:var(--teal-dark);border-color:var(--teal-mid);font-weight:500}
+
+/* Table view */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead tr{background:var(--bg-2)}
+th{padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:11px 12px;border-bottom:1px solid var(--border);vertical-align:top;color:var(--text);line-height:1.55}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafafa}
+.shot-num{font-weight:700;color:var(--teal);font-size:13px}
+.sub-text{font-size:11px;color:var(--text-hint);margin-top:3px}
+.emo-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.dialogue-block{font-size:12px;color:var(--blue-dark);font-style:italic;border-left:2px solid var(--blue-mid);padding-left:7px;margin-top:5px}
+.char-line{font-size:12px;color:var(--text-muted);margin-bottom:4px}
+
+/* Copy prompt btn in table */
+.copy-prompt-btn{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 8px;background:var(--amber-light);color:#854F0B;border:1px solid #FAC775;border-radius:var(--r-sm);cursor:pointer;font-family:inherit;margin-top:6px;transition:opacity .12s;white-space:nowrap}
+.copy-prompt-btn:hover{opacity:.8}
+.copy-prompt-btn.copied{background:var(--teal-light);color:var(--teal-dark);border-color:var(--teal-mid)}
+
+/* Card view */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;padding:16px}
+.shot-card{border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;background:#fff;transition:box-shadow .15s}
+.shot-card:hover{box-shadow:0 2px 12px rgba(0,0,0,.07)}
+.shot-card-header{padding:9px 12px;background:var(--bg-2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.shot-card-num{font-weight:700;color:var(--teal);font-size:13px;flex-shrink:0}
+.shot-card-tags{display:flex;gap:5px;flex-wrap:wrap;flex:1}
+.shot-card-emo{margin-left:auto;font-size:12px;display:flex;align-items:center;gap:4px;flex-shrink:0}
+.shot-card-body{padding:11px 12px}
+.shot-card-visual{font-size:13px;color:var(--text);line-height:1.6;margin-bottom:8px}
+.shot-card-chars{font-size:12px;color:var(--text-muted);margin-bottom:6px}
+.shot-card-dialogue{font-size:12px;color:var(--blue-dark);font-style:italic;border-left:2px solid var(--blue-mid);padding-left:7px;margin-bottom:8px;line-height:1.55}
+.shot-card-bg{font-size:11px;color:var(--text-hint);padding-top:7px;border-top:1px solid var(--border)}
+.shot-card-footer{padding:8px 12px;border-top:1px solid var(--border);background:var(--bg-2)}
+.prompt-preview{font-size:11px;color:var(--text-hint);line-height:1.5;margin-bottom:6px;word-break:break-all}
+.copy-prompt-btn-card{display:flex;align-items:center;justify-content:center;gap:5px;width:100%;padding:6px;background:var(--amber-light);color:#854F0B;border:1px solid #FAC775;border-radius:var(--r-sm);cursor:pointer;font-family:inherit;font-size:12px;font-weight:500;transition:opacity .12s}
+.copy-prompt-btn-card:hover{opacity:.8}
+.copy-prompt-btn-card.copied{background:var(--teal-light);color:var(--teal-dark);border-color:var(--teal-mid)}
+
+/* Rhythm chart */
+.rhythm-section{padding:14px 16px;border-top:1px solid var(--border)}
+.rhythm-title{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.rhythm-chart{display:flex;align-items:flex-end;gap:4px;height:52px}
+.rhythm-bar-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;min-width:0}
+.rhythm-bar{width:100%;border-radius:3px 3px 0 0;transition:opacity .15s;cursor:default}
+.rhythm-bar:hover{opacity:.75}
+.rhythm-label{font-size:9px;color:var(--text-hint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;text-align:center}
+
+/* Stat bar */
+.stat-bar{padding:10px 16px;border-top:1px solid var(--border);background:var(--bg-2);display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--text-muted)}
+.stat-bar strong{font-weight:600;color:var(--text)}
+
+/* ══════════ TAB 3: 角色 ══════════ */
+.char-list{padding:12px 16px;display:flex;flex-direction:column;gap:10px;min-height:60px}
+.char-empty{text-align:center;padding:28px 0;color:var(--text-hint);font-size:13px}
+.char-card{border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden}
+.char-card-head{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--bg-2);cursor:pointer;user-select:none}
+.char-avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
+.char-name-label{font-size:13px;font-weight:500;flex:1}
+.char-toggle{font-size:11px;color:var(--text-hint);transition:transform .2s}
+.char-toggle.open{transform:rotate(180deg)}
+.char-body{padding:12px 14px;border-top:1px solid var(--border);display:none;background:#fff}
+.char-body.open{display:block}
+.char-actions{display:flex;justify-content:flex-end;margin-top:8px}
+.add-char-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border:1px dashed var(--border-mid);border-radius:var(--r-sm);background:none;color:var(--text-muted);font-size:13px;cursor:pointer;font-family:inherit;transition:all .12s;margin:0 16px 12px;width:calc(100% - 32px)}
+.add-char-btn:hover{border-color:var(--teal-mid);color:var(--teal);background:var(--teal-light)}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo-mark"><svg viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h10v2H4z"/></svg></div>
+  <span class="brand">分镜<em>AI</em></span>
+  <span class="vtag">Beta v0.4</span>
+  <span class="topbar-r">本地运行 · 数据不上传</span>
+</div>
+
+<div class="pipeline">
+  <div class="pipe-step active" id="pipe-0" onclick="switchTab('write')"><span class="pipe-num">1</span>剧本创作</div>
+  <span class="pipe-arrow">›</span>
+  <div class="pipe-step" id="pipe-1" onclick="switchTab('storyboard')"><span class="pipe-num">2</span>分镜生成</div>
+  <span class="pipe-arrow">›</span>
+  <div class="pipe-step" id="pipe-2" onclick="switchTab('characters')"><span class="pipe-num">3</span>角色管理<span class="char-count-badge" id="char-count-badge" style="margin-left:6px">0</span></div>
+</div>
+
+<div class="main">
+
+<!-- ══ TAB 1: 剧本创作 ══ -->
+<div class="tab-panel active" id="tab-write">
+  <div class="write-layout">
+    <div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">创作模式</span></div>
+        <div class="card-body">
+          <div class="mode-tabs">
+            <button class="mode-tab active" onclick="setMode('generate')" id="mode-generate">✦ 生成剧本</button>
+            <button class="mode-tab" onclick="setMode('outline')" id="mode-outline">📋 创作大纲</button>
+            <button class="mode-tab" onclick="setMode('continue')" id="mode-continue">→ 续写</button>
+            <button class="mode-tab" onclick="setMode('polish')" id="mode-polish">✧ 润色</button>
+          </div>
+          <div id="settings-generate">
+            <div class="config-section">
+              <span class="field-label">故事类型</span>
+              <div class="genre-grid" id="genre-grid">
+                <button class="genre-chip active" onclick="setGenre(this,'现代都市')">现代都市</button>
+                <button class="genre-chip" onclick="setGenre(this,'古风玄幻')">古风玄幻</button>
+                <button class="genre-chip" onclick="setGenre(this,'科幻未来')">科幻未来</button>
+                <button class="genre-chip" onclick="setGenre(this,'悬疑推理')">悬疑推理</button>
+                <button class="genre-chip" onclick="setGenre(this,'校园青春')">校园青春</button>
+                <button class="genre-chip" onclick="setGenre(this,'职场商战')">职场商战</button>
+              </div>
+            </div>
+            <div class="config-section">
+              <span class="field-label">核心主题 / 冲突</span>
+              <input type="text" id="theme-input" placeholder="如：背叛与救赎、权力与爱情…" style="margin-top:2px">
+            </div>
+            <div class="config-section">
+              <span class="field-label">故事基调</span>
+              <div class="tone-row">
+                <button class="tone-chip active" onclick="setTone(this,'紧张悬疑')">紧张悬疑</button>
+                <button class="tone-chip" onclick="setTone(this,'温情治愈')">温情治愈</button>
+                <button class="tone-chip" onclick="setTone(this,'热血励志')">热血励志</button>
+                <button class="tone-chip" onclick="setTone(this,'轻松搞笑')">轻松搞笑</button>
+                <button class="tone-chip" onclick="setTone(this,'黑暗压抑')">黑暗压抑</button>
+              </div>
+            </div>
+            <div class="config-section">
+              <div class="field-row">
+                <div class="field-group"><span class="field-label">场数</span><input type="number" id="scenes-input" value="2" min="1" max="6"></div>
+                <div class="field-group"><span class="field-label">使用角色库</span><select id="use-chars-select"><option value="yes">是（自动带入）</option><option value="no">否</option></select></div>
+              </div>
+            </div>
+          </div>
+          <div id="settings-continue" style="display:none">
+            <div class="config-section"><span class="field-label">续写说明（可选）</span><textarea class="field-ta" id="continue-instruction" rows="3" placeholder="如：让两人关系出现转折…"></textarea></div>
+          </div>
+          <div id="settings-polish" style="display:none">
+            <div class="config-section">
+              <span class="field-label">优化方向</span>
+              <div class="tone-row" style="margin-bottom:10px">
+                <button class="tone-chip active" onclick="setPolishDir(this,'提升对白张力，加强画面感')">对白张力</button>
+                <button class="tone-chip" onclick="setPolishDir(this,'优化节奏，删减冗余描述')">精简节奏</button>
+                <button class="tone-chip" onclick="setPolishDir(this,'增强人物性格反差')">人物塑造</button>
+                <button class="tone-chip" onclick="setPolishDir(this,'强化情绪渲染和氛围描写')">情绪渲染</button>
+              </div>
+              <input type="text" id="polish-custom" placeholder="或自定义优化要求…">
+            </div>
+          </div>
+          <button class="primary-btn" id="write-btn" onclick="runWrite()" style="width:100%;justify-content:center;margin-top:4px">
+            <div class="spinner" id="write-spinner"></div>
+            <span id="write-btn-text">生成剧本</span>
+          </button>
+          <div class="error-box" id="write-error"></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="script-toolbar">
+          <span class="card-title">剧本编辑器</span>
+          <button class="ghost-btn secondary" onclick="clearScript()">清空</button>
+          <button class="ghost-btn secondary" onclick="copyScript()">复制</button>
+          <span class="script-wc" id="script-wc">0 字</span>
+        </div>
+        <div class="progress-wrap" id="write-progress"><div class="progress-fill" id="write-progress-fill"></div></div>
+        <textarea class="script-area" id="script-editor" placeholder="剧本内容将在这里显示，你也可以直接编辑…
+
+① 左侧选模式和设定  ② 点击生成  ③ 编辑修改  ④ 发送到分镜生成" oninput="updateWC()"></textarea>
+        <div class="send-to-storyboard">
+          <span style="font-size:12px;color:var(--text-hint)">完成后发送到下一步</span>
+          <button class="primary-btn" onclick="sendToStoryboard()">发送到分镜生成 →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TAB 2: 分镜生成 ══ -->
+<div class="tab-panel" id="tab-storyboard">
+  <div class="two-col">
+    <div>
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">剧本内容</span>
+          <button class="ghost-btn secondary" onclick="switchTab('write')">← 返回编辑</button>
+        </div>
+        <textarea class="storyboard-input" id="storyboard-script" placeholder="在此粘贴剧本，或从「剧本创作」页发送过来…"></textarea>
+        <div class="config-bar">
+          <span class="config-label">画风</span>
+          <select id="style-select">
+            <option>日系少年漫</option><option>国风古风漫画</option><option>美式漫画</option><option>写实风格</option><option>赛博朋克</option>
+          </select>
+          <span class="config-label" style="margin-left:6px">景别</span>
+          <select id="shot-pref">
+            <option>均衡分配</option><option>偏重近景特写</option><option>偏重全景远景</option>
+          </select>
+        </div>
+        <div class="error-box" id="sb-error"></div>
+        <button class="full-btn" id="sb-btn" onclick="runAnalysis()">
+          <div class="btn-inner"><div class="spinner" id="sb-spinner"></div><span id="sb-btn-text">生成分镜脚本</span></div>
+        </button>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="background:var(--bg-2);border-style:dashed">
+        <div class="card-head"><span class="card-title">说明</span></div>
+        <div class="card-body" style="font-size:13px;color:var(--text-muted);line-height:1.9">
+          <div style="display:flex;gap:10px;margin-bottom:8px"><span style="color:var(--teal);font-weight:600;flex-shrink:0">01</span><span>景别与运镜建议</span></div>
+          <div style="display:flex;gap:10px;margin-bottom:8px"><span style="color:var(--teal);font-weight:600;flex-shrink:0">02</span><span>角色动作与外貌关键词（跨镜头保持一致）</span></div>
+          <div style="display:flex;gap:10px;margin-bottom:8px"><span style="color:var(--teal);font-weight:600;flex-shrink:0">03</span><span>台词提取与情绪标注 + 情绪节奏图</span></div>
+          <div style="display:flex;gap:10px;margin-bottom:8px"><span style="color:var(--teal);font-weight:600;flex-shrink:0">04</span><span>背景氛围描述（可直接用于 AI 绘图）</span></div>
+          <div style="display:flex;gap:10px"><span style="color:var(--teal);font-weight:600;flex-shrink:0">05</span><span>每格一键复制绘图 Prompt（Midjourney/ComfyUI）</span></div>
+          <div style="margin-top:14px;padding:10px;background:#fff;border:1px solid var(--border);border-radius:var(--r-sm);font-size:12px;color:var(--text-hint)">切换「卡片视图」可查看每格的完整绘图 Prompt。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Output -->
+  <div class="output-section" id="output-section">
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">分镜脚本</span>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div class="view-toggle">
+            <button id="view-table-btn" class="active" onclick="setView('table')">表格</button>
+            <button id="view-card-btn" onclick="setView('card')">卡片</button>
+          </div>
+          <button class="ghost-btn" onclick="copyAllPrompts()" id="copy-all-btn">复制全部 Prompt</button>
+          <button class="ghost-btn" onclick="exportTSV()" id="export-btn">导出 TSV</button>
+        </div>
+      </div>
+      <div class="progress-wrap" id="sb-progress"><div class="progress-fill" id="sb-progress-fill"></div></div>
+
+      <!-- Table view -->
+      <div id="view-table">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th style="width:52px">镜号</th>
+              <th style="width:110px">景别/运镜</th>
+              <th style="width:76px">情绪</th>
+              <th>画面描述 / 台词</th>
+              <th style="width:120px">背景氛围</th>
+            </tr></thead>
+            <tbody id="shots-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Card view -->
+      <div id="view-card" style="display:none">
+        <div class="card-grid" id="shots-card-grid"></div>
+      </div>
+
+      <!-- Rhythm chart -->
+      <div class="rhythm-section">
+        <div class="rhythm-title">情绪节奏图</div>
+        <div class="rhythm-chart" id="rhythm-chart"></div>
+      </div>
+
+      <div class="stat-bar" id="stat-bar"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TAB 3: 角色管理 ══ -->
+<div class="tab-panel" id="tab-characters">
+  <div style="max-width:700px">
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">角色设定库</span>
+        <span style="font-size:12px;color:var(--text-hint)">设定自动注入剧本创作与分镜 Prompt</span>
+      </div>
+      <div class="char-list" id="char-list">
+        <div class="char-empty" id="char-empty">还没有角色，点击下方按钮添加</div>
+      </div>
+      <button class="add-char-btn" onclick="addCharacter()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        添加新角色
+      </button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+// ══ State ══
+let characters = JSON.parse(localStorage.getItem('sb_chars')||'[]');
+let nextId = parseInt(localStorage.getItem('sb_nextId')||'1');
+let currentMode='generate', currentGenre='现代都市', currentTone='紧张悬疑', currentPolishDir='提升对白张力，加强画面感';
+let currentView='table';
+let lastShots=[], lastStyle='', lastSceneTitle='';
+
+const AVATAR_COLORS=[
+  {bg:'#E1F5EE',text:'#0F6E56'},{bg:'#E6F1FB',text:'#185FA5'},
+  {bg:'#EEEDFE',text:'#3C3489'},{bg:'#FAECE7',text:'#993C1D'},
+  {bg:'#FAEEDA',text:'#854F0B'},{bg:'#FBEAF0',text:'#72243E'},
+];
+const ROLE_TAGS={'主角':{bg:'#E1F5EE',text:'#0F6E56'},'配角':{bg:'#E6F1FB',text:'#185FA5'},'反派':{bg:'#FAECE7',text:'#993C1D'},'龙套':{bg:'#F1EFE8',text:'#5F5E5A'}};
+const EMO_COLORS={'紧张':'#dc2626','对峙':'#dc2626','愤怒':'#dc2626','高潮':'#dc2626','平静':'#1D9E75','轻松':'#1D9E75','温馨':'#1D9E75','悲伤':'#378ADD','压抑':'#378ADD','失落':'#378ADD','愉快':'#EF9F27','惊讶':'#EF9F27','疑惑':'#EF9F27','中立':'#9ca3af'};
+const EMO_INTENSITY={'紧张':5,'对峙':5,'愤怒':5,'高潮':5,'平静':1,'轻松':1,'温馨':2,'悲伤':3,'压抑':4,'失落':3,'愉快':2,'惊讶':4,'疑惑':2,'中立':1};
+
+function saveChars(){localStorage.setItem('sb_chars',JSON.stringify(characters));localStorage.setItem('sb_nextId',String(nextId));updateCharBadge()}
+function updateCharBadge(){document.getElementById('char-count-badge').textContent=characters.length}
+
+// ══ Pipeline / Tab ══
+const TABS=['write','storyboard','characters'];
+function switchTab(tab){
+  TABS.forEach((t,i)=>{
+    document.getElementById('tab-'+t).classList.toggle('active',t===tab);
+    const p=document.getElementById('pipe-'+i);p.classList.remove('active','done');
+    const idx=TABS.indexOf(tab);
+    if(i===idx)p.classList.add('active');else if(i<idx)p.classList.add('done');
+  });
+}
+
+// ══ View toggle ══
+function setView(v){
+  currentView=v;
+  document.getElementById('view-table').style.display=v==='table'?'block':'none';
+  document.getElementById('view-card').style.display=v==='card'?'block':'none';
+  document.getElementById('view-table-btn').classList.toggle('active',v==='table');
+  document.getElementById('view-card-btn').classList.toggle('active',v==='card');
+}
+
+// ══ Prompt builder ══
+function buildDrawingPrompt(shot, style){
+  const parts=[];
+  if(shot.visual_desc) parts.push(shot.visual_desc);
+  if(shot.bg_atmosphere) parts.push(shot.bg_atmosphere);
+  if(shot.shot_type) parts.push(shot.shot_type+'构图');
+  parts.push(style||'漫画风格');
+  parts.push('高质量，细节丰富，漫画分镜');
+  return parts.filter(Boolean).join('，');
+}
+
+// ══ Render shots ══
+function getEmoColor(e){for(const k of Object.keys(EMO_COLORS)){if(e&&e.includes(k))return EMO_COLORS[k];}return '#9ca3af';}
+function getEmoIntensity(e){for(const k of Object.keys(EMO_INTENSITY)){if(e&&e.includes(k))return EMO_INTENSITY[k];}return 1;}
+
+function renderShots(result){
+  lastShots=result.shots||[];
+  lastSceneTitle=result.scene_title||'未命名';
+  lastStyle=document.getElementById('style-select').value;
+
+  renderTableView();
+  renderCardView();
+  renderRhythm();
+
+  document.getElementById('stat-bar').innerHTML=`
+    <span>场景：<strong>${lastSceneTitle}</strong></span>
+    <span>总镜数：<strong>${lastShots.length}</strong></span>
+    <span>注入角色：<strong>${characters.filter(c=>c.name&&c.appearance).length} 个</strong></span>
+    <span style="margin-left:auto;color:#9ca3af;font-size:11px">Groq · llama-3.3-70b</span>
+  `;
+  const sec=document.getElementById('output-section');
+  sec.classList.add('visible');
+  sec.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function renderTableView(){
+  const tbody=document.getElementById('shots-body');
+  tbody.innerHTML='';
+  lastShots.forEach((s,i)=>{
+    const prompt=buildDrawingPrompt(s,lastStyle);
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td><span class="shot-num">S${String(s.shot_num).padStart(2,'0')}</span></td>
+      <td><span class="tag tag-teal">${s.shot_type||'-'}</span><div class="sub-text">${s.camera_move||'固定'}</div></td>
+      <td><span class="emo-dot" style="background:${getEmoColor(s.emotion)}"></span>${s.emotion||'-'}</td>
+      <td>
+        ${s.characters?`<div class="char-line">👤 ${s.characters}</div>`:''}
+        <div>${s.visual_desc||'-'}</div>
+        ${s.dialogue?`<div class="dialogue-block">"${s.dialogue}"</div>`:''}
+        <button class="copy-prompt-btn" onclick="copyPrompt(this,'${encodeURIComponent(prompt)}')">
+          ✦ 复制绘图 Prompt
+        </button>
+      </td>
+      <td style="font-size:12px;color:#6b7280">${s.bg_atmosphere||'-'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderCardView(){
+  const grid=document.getElementById('shots-card-grid');
+  grid.innerHTML='';
+  lastShots.forEach((s,i)=>{
+    const prompt=buildDrawingPrompt(s,lastStyle);
+    const card=document.createElement('div');
+    card.className='shot-card';
+    card.innerHTML=`
+      <div class="shot-card-header">
+        <span class="shot-card-num">S${String(s.shot_num).padStart(2,'0')}</span>
+        <div class="shot-card-tags">
+          <span class="tag tag-teal">${s.shot_type||'-'}</span>
+          <span class="tag" style="background:var(--bg-3);color:var(--text-muted)">${s.camera_move||'固定'}</span>
+        </div>
+        <span class="shot-card-emo">
+          <span class="emo-dot" style="background:${getEmoColor(s.emotion)};display:inline-block;width:7px;height:7px;border-radius:50%"></span>
+          <span style="font-size:12px;color:var(--text-muted)">${s.emotion||'-'}</span>
+        </span>
+      </div>
+      <div class="shot-card-body">
+        ${s.characters?`<div class="shot-card-chars">👤 ${s.characters}</div>`:''}
+        <div class="shot-card-visual">${s.visual_desc||'-'}</div>
+        ${s.dialogue?`<div class="shot-card-dialogue">"${s.dialogue}"</div>`:''}
+        ${s.bg_atmosphere?`<div class="shot-card-bg">🎨 ${s.bg_atmosphere}</div>`:''}
+      </div>
+      <div class="shot-card-footer">
+        <div class="prompt-preview">${prompt.slice(0,80)}${prompt.length>80?'…':''}</div>
+        <button class="copy-prompt-btn-card" onclick="copyPrompt(this,'${encodeURIComponent(prompt)}')">
+          ✦ 复制绘图 Prompt
+        </button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function renderRhythm(){
+  const chart=document.getElementById('rhythm-chart');
+  chart.innerHTML='';
+  if(!lastShots.length) return;
+  const maxH=44;
+  lastShots.forEach(s=>{
+    const intensity=getEmoIntensity(s.emotion);
+    const h=Math.max(8,Math.round((intensity/5)*maxH));
+    const color=getEmoColor(s.emotion);
+    const wrap=document.createElement('div');
+    wrap.className='rhythm-bar-wrap';
+    wrap.title=`S${String(s.shot_num).padStart(2,'0')} · ${s.emotion||'中立'}`;
+    wrap.innerHTML=`
+      <div class="rhythm-bar" style="height:${h}px;background:${color};opacity:.75"></div>
+      <div class="rhythm-label">S${s.shot_num}</div>
+    `;
+    chart.appendChild(wrap);
+  });
+}
+
+function copyPrompt(btn, encoded){
+  const text=decodeURIComponent(encoded);
+  navigator.clipboard.writeText(text).then(()=>{
+    const orig=btn.textContent;
+    btn.textContent='✓ 已复制';btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent=orig;btn.classList.remove('copied');},2000);
+  });
+}
+
+function copyAllPrompts(){
+  if(!lastShots.length)return;
+  const all=lastShots.map((s,i)=>`[S${String(s.shot_num).padStart(2,'0')}] ${buildDrawingPrompt(s,lastStyle)}`).join('\n\n');
+  navigator.clipboard.writeText(all).then(()=>{
+    const btn=document.getElementById('copy-all-btn');
+    btn.textContent='已复制 ✓';
+    setTimeout(()=>btn.textContent='复制全部 Prompt',2000);
+  });
+}
+
+// ══ Analysis ══
+async function runAnalysis(){
+  const script=document.getElementById('storyboard-script').value.trim();
+  if(script.length<20){showSbError('请先输入剧本内容');return;}
+  hideSbError();setSbLoading(true);
+  startProgress('sb-progress','sb-progress-fill');
+  try{
+    const res=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({script,style:document.getElementById('style-select').value,shotPref:document.getElementById('shot-pref').value,characters:characters.filter(c=>c.name&&c.appearance)})});
+    const data=await res.json();
+    finishProgress('sb-progress','sb-progress-fill');
+    if(data.error) throw new Error(data.error.message||data.error);
+    const raw=data.content?.find(b=>b.type==='text')?.text||'';
+    const match=raw.match(/\{[\s\S]*\}/);
+    if(!match) throw new Error('返回格式异常，请重试');
+    renderShots(JSON.parse(match[0]));
+  }catch(e){finishProgress('sb-progress','sb-progress-fill');showSbError('生成失败：'+e.message);}
+  finally{setSbLoading(false);}
+}
+
+function setSbLoading(on){
+  document.getElementById('sb-btn').disabled=on;
+  document.getElementById('sb-spinner').style.display=on?'block':'none';
+  document.getElementById('sb-btn-text').textContent=on?'正在分析剧本…':'生成分镜脚本';
+}
+function showSbError(msg){const b=document.getElementById('sb-error');b.textContent=msg;b.style.display='block';}
+function hideSbError(){document.getElementById('sb-error').style.display='none';}
+
+// ══ Write ══
+function setMode(m){
+  currentMode=m;
+  ['generate','outline','continue','polish'].forEach(x=>document.getElementById('mode-'+x).classList.toggle('active',x===m));
+  document.getElementById('settings-generate').style.display=(m==='generate'||m==='outline')?'block':'none';
+  document.getElementById('settings-continue').style.display=m==='continue'?'block':'none';
+  document.getElementById('settings-polish').style.display=m==='polish'?'block':'none';
+  const L={generate:'生成剧本',outline:'生成大纲',continue:'续写剧本',polish:'润色剧本'};
+  document.getElementById('write-btn-text').textContent=L[m];
+}
+function setGenre(el,g){currentGenre=g;document.querySelectorAll('.genre-chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');}
+function setTone(el,t){currentTone=t;document.querySelectorAll('.tone-chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');}
+function setPolishDir(el,d){currentPolishDir=d;document.querySelectorAll('.tone-chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');}
+function updateWC(){document.getElementById('script-wc').textContent=document.getElementById('script-editor').value.length+' 字';}
+function clearScript(){if(confirm('确认清空剧本？')){document.getElementById('script-editor').value='';updateWC();}}
+function copyScript(){navigator.clipboard.writeText(document.getElementById('script-editor').value);}
+function sendToStoryboard(){
+  const s=document.getElementById('script-editor').value.trim();
+  if(!s){alert('剧本内容为空');return;}
+  document.getElementById('storyboard-script').value=s;
+  switchTab('storyboard');
+}
+
+async function runWrite(){
+  const btn=document.getElementById('write-btn');
+  const errBox=document.getElementById('write-error');
+  errBox.style.display='none';
+  const existing=document.getElementById('script-editor').value.trim();
+  if((currentMode==='continue'||currentMode==='polish')&&!existing){errBox.textContent='请先在编辑器中输入已有剧本';errBox.style.display='block';return;}
+  btn.disabled=true;document.getElementById('write-spinner').style.display='block';
+  const L={generate:'生成中…',outline:'规划中…',continue:'续写中…',polish:'润色中…'};
+  document.getElementById('write-btn-text').textContent=L[currentMode];
+  startProgress('write-progress','write-progress-fill');
+  try{
+    const useChars=document.getElementById('use-chars-select')?.value==='yes';
+    const payload={mode:currentMode,genre:currentGenre,theme:document.getElementById('theme-input')?.value||'',tone:currentTone,scenes:parseInt(document.getElementById('scenes-input')?.value||'2'),characters:useChars?characters.filter(c=>c.name):[],existingScript:existing,instruction:currentMode==='polish'?(document.getElementById('polish-custom').value||currentPolishDir):(document.getElementById('continue-instruction')?.value||'')};
+    const res=await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const data=await res.json();
+    if(data.error) throw new Error(data.error);
+    if(currentMode==='continue') document.getElementById('script-editor').value+='\n\n'+data.text;
+    else document.getElementById('script-editor').value=data.text;
+    updateWC();
+  }catch(e){errBox.textContent='生成失败：'+e.message;errBox.style.display='block';}
+  finally{
+    finishProgress('write-progress','write-progress-fill');
+    btn.disabled=false;document.getElementById('write-spinner').style.display='none';
+    const L2={generate:'生成剧本',outline:'生成大纲',continue:'续写剧本',polish:'润色剧本'};
+    document.getElementById('write-btn-text').textContent=L2[currentMode];
+  }
+}
+
+// ══ Progress ══
+let progTimers={};
+function startProgress(wId,fId){const w=document.getElementById(wId),f=document.getElementById(fId);w.style.display='block';f.style.width='0%';let p=0;progTimers[wId]=setInterval(()=>{p=Math.min(p+Math.random()*6,82);f.style.width=p+'%';},400);}
+function finishProgress(wId,fId){clearInterval(progTimers[wId]);const f=document.getElementById(fId);f.style.width='100%';setTimeout(()=>{document.getElementById(wId).style.display='none';f.style.width='0%';},500);}
+
+// ══ Export TSV ══
+function exportTSV(){
+  if(!lastShots.length)return;
+  let tsv='镜号\t景别\t运镜\t情绪\t角色\t画面描述\t台词\t背景\t绘图Prompt\n';
+  lastShots.forEach(s=>{
+    tsv+=[`S${String(s.shot_num).padStart(2,'0')}`,s.shot_type||'',s.camera_move||'',s.emotion||'',s.characters||'',s.visual_desc||'',s.dialogue||'',s.bg_atmosphere||'',buildDrawingPrompt(s,lastStyle)].join('\t')+'\n';
+  });
+  const blob=new Blob(['\uFEFF'+tsv],{type:'text/tab-separated-values;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='分镜脚本.tsv';a.click();
+  const btn=document.getElementById('export-btn');btn.textContent='已导出 ✓';setTimeout(()=>btn.textContent='导出 TSV',2000);
+}
+
+// ══ Characters ══
+function addCharacter(){const id=nextId++;characters.push({id,name:'新角色',age:'',gender:'女',role:'配角',appearance:'',personality:'',signature:'',colorIdx:id});saveChars();renderCharList();setTimeout(()=>toggleCharBody(id),50);}
+function deleteCharacter(id){characters=characters.filter(c=>c.id!==id);saveChars();renderCharList();}
+function updateChar(id,field,value){const c=characters.find(c=>c.id===id);if(c){c[field]=value;saveChars();}if(field==='name'||field==='role')renderCharList();}
+function toggleCharBody(id){const b=document.getElementById('char-body-'+id),t=document.getElementById('char-toggle-'+id);if(!b)return;b.classList.toggle('open');t.classList.toggle('open');}
+function renderCharList(){
+  const list=document.getElementById('char-list');
+  document.getElementById('char-empty').style.display=characters.length===0?'block':'none';
+  list.querySelectorAll('.char-card').forEach(el=>el.remove());
+  characters.forEach(c=>{
+    const ac=AVATAR_COLORS[c.colorIdx%AVATAR_COLORS.length];
+    const rt=ROLE_TAGS[c.role]||ROLE_TAGS['配角'];
+    const card=document.createElement('div');card.className='char-card';card.id='char-card-'+c.id;
+    card.innerHTML=`
+      <div class="char-card-head" onclick="toggleCharBody(${c.id})">
+        <div class="char-avatar" style="background:${ac.bg};color:${ac.text}">${(c.name||'?').slice(0,1)}</div>
+        <span class="char-name-label">${c.name||'未命名'}</span>
+        <span class="tag" style="background:${rt.bg};color:${rt.text}">${c.role||'配角'}</span>
+        <span class="char-toggle" id="char-toggle-${c.id}">▾</span>
+      </div>
+      <div class="char-body" id="char-body-${c.id}">
+        <div class="field-row">
+          <div class="field-group"><span class="field-label">角色名</span><input type="text" value="${c.name}" oninput="updateChar(${c.id},'name',this.value)" placeholder="林晓"></div>
+          <div class="field-group"><span class="field-label">定位</span><select onchange="updateChar(${c.id},'role',this.value)">${['主角','配角','反派','龙套'].map(r=>`<option${c.role===r?' selected':''}>${r}</option>`).join('')}</select></div>
+        </div>
+        <div class="field-row">
+          <div class="field-group"><span class="field-label">年龄</span><input type="text" value="${c.age}" oninput="updateChar(${c.id},'age',this.value)" placeholder="25"></div>
+          <div class="field-group"><span class="field-label">性别</span><select onchange="updateChar(${c.id},'gender',this.value)">${['女','男','不限'].map(g=>`<option${c.gender===g?' selected':''}>${g}</option>`).join('')}</select></div>
+        </div>
+        <div class="field-row full"><div class="field-group"><span class="field-label">外貌描述（AI绘图关键词）</span><textarea class="field-ta" oninput="updateChar(${c.id},'appearance',this.value)" placeholder="黑色短发，双马尾，破旧皮衣，眼神锐利">${c.appearance}</textarea></div></div>
+        <div class="field-row full"><div class="field-group"><span class="field-label">性格特征</span><input type="text" value="${c.personality}" oninput="updateChar(${c.id},'personality',this.value)" placeholder="冷静、敏锐、外强中干"></div></div>
+        <div class="field-row full"><div class="field-group"><span class="field-label">标志性特征（必须保留）</span><input type="text" value="${c.signature}" oninput="updateChar(${c.id},'signature',this.value)" placeholder="左手腕纹身、银色项链"></div></div>
+        <div class="char-actions"><button class="ghost-btn danger" onclick="deleteCharacter(${c.id})">删除角色</button></div>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+  updateCharBadge();
+}
+
+// Init
+renderCharList();updateWC();
+</script>
+</body>
+</html>
