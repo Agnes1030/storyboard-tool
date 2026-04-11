@@ -1,0 +1,36 @@
+{
+  "project": {
+    "id": "default-project",
+    "title": "默认漫剧项目",
+    "genre": "现代都市",
+    "theme": "背叛与救赎",
+    "tone": "紧张悬疑",
+    "createdAt": "2026-04-11T00:00:00.000Z",
+    "updatedAt": "2026-04-11T00:00:00.000Z"
+  },
+  "global": {
+    "visualStyle": "日系少年漫",
+    "shotPreference": "均衡分配",
+    "characters": []
+  },
+  "scenes": [
+    {
+      "id": "scene-1",
+      "title": "雨夜重逢",
+      "script": "【第1场】天桥下，深夜，暴雨。林晓：你终于来了。周沉：我没得选。",
+      "storyboard": {
+        "scene_title": "雨夜重逢",
+        "total_shots": 0,
+        "shots": []
+      },
+      "notes": "Starter scene placeholder"
+    }
+  ],
+  "history": [
+    {
+      "type": "project_created",
+      "at": "2026-04-11T00:00:00.000Z",
+      "message": "Initialized default storyboard project template."
+    }
+  ]
+}

@@ -2,8 +2,27 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT || 3000);
 const GROQ_API_KEY = process.env.GROQ_API_KEY || process.env.ANTHROPIC_API_KEY;
+const DATA_ROOT = process.env.STORYBOARD_DATA_ROOT || path.join(__dirname, 'data');
+const DEFAULT_PROJECT_DIR = path.join(DATA_ROOT, 'projects', 'default-project');
+const DEFAULT_PROJECT_FILE = path.join(DEFAULT_PROJECT_DIR, 'project.json');
+const DEFAULT_PROJECT_TEMPLATE_FILE = path.join(DATA_ROOT, 'templates', 'default-project-template.json');
+
+function loadDefaultProjectTemplate() {
+  return JSON.parse(fs.readFileSync(DEFAULT_PROJECT_TEMPLATE_FILE, 'utf8'));
+}
+
+function ensureDefaultProject() {
+  if (!fs.existsSync(DEFAULT_PROJECT_FILE)) {
+    fs.mkdirSync(DEFAULT_PROJECT_DIR, { recursive: true });
+    const project = loadDefaultProjectTemplate();
+    fs.writeFileSync(DEFAULT_PROJECT_FILE, JSON.stringify(project, null, 2));
+    return project;
+  }
+
+  return JSON.parse(fs.readFileSync(DEFAULT_PROJECT_FILE, 'utf8'));
+}
 
 async function callGroq(messages, maxTokens = 2000, temperature = 0.7) {
   if (!GROQ_API_KEY) throw new Error('缺少 GROQ_API_KEY 或 ANTHROPIC_API_KEY 环境变量');
@@ -127,6 +146,20 @@ ${characters?.length ? `【角色】${characters.map(c=>`${c.name}（${c.role}�
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ content: [{ type: 'text', text }] }));
     });
+    return;
+  }
+
+  // ── 项目持久化接口 ──
+  if (req.method === 'GET' && req.url === '/api/project') {
+    try {
+      const project = ensureDefaultProject();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(project));
+    } catch (err) {
+      console.error('[project error]', err.message);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+    }
     return;
   }
 

@@ -44,12 +44,28 @@ node server.js
 ## 文件结构
 ```
 storyboard-tool/
-├── server.js          # 后端服务（含 Prompt 逻辑）
-├── package.json
-├── README.md
+├── .claude/
+│   ├── context/        # Claude 协作上下文与规则
+│   ├── memory/         # 协作记忆索引与记录
+│   ├── plans/          # 计划文件
+│   └── skills/         # 工作流技能占位定义
+├── app/                # 迁移中的应用层骨架
+├── data/
+│   ├── presets/        # 运行时画风与景别预设
+│   ├── projects/
+│   │   └── default-project/
+│   │       └── project.json
+│   └── templates/      # 默认项目模板
+├── docs/plans/         # 仓库重构计划
+├── server.js           # 当前运行中的后端入口
 └── public/
-    └── index.html     # 前端界面
+    └── index.html      # 当前运行中的前端入口
 ```
 
+## 运行时数据布局
+- 默认项目持久化路径：`data/projects/default-project/project.json`
+- `data/templates/default-project-template.json` 用于首次创建默认项目
+- `app/` 目录当前仅提供迁移骨架，实际运行入口仍然是 `server.js` 和 `public/index.html`
+
 ## Prompt 调整
-打开 `server.js`，找到 `buildPrompt()` 函数即可修改分析逻辑。
+打开 `server.js`，找到 `buildStoryboardPrompt()` 函数即可修改分析逻辑。
