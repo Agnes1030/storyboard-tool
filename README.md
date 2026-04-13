@@ -63,9 +63,15 @@ storyboard-tool/
 ```
 
 ## 运行时数据布局
-- 默认项目持久化路径：`data/projects/default-project/project.json`
+- 默认项目目录：`data/projects/default-project/`
+- 默认项目持久化文件：`data/projects/default-project/project.json`
 - `data/templates/default-project-template.json` 用于首次创建默认项目
 - `app/` 目录当前仅提供迁移骨架，实际运行入口仍然是 `server.js` 和 `public/index.html`
+
+## 迁移状态说明
+- 本次仓库重构先建立目录契约与运行时数据布局，不在同一批次内迁移完整前端或后端逻辑。
+- 最终验证步骤用于确认前序结构改动仍保持可运行状态，而不是引入新的结构层文件。
+- 在完成后续迁移前，`server.js` 与 `public/index.html` 继续作为主入口，`.claude/`、`app/`、`data/` 则作为长期演进的目标结构。
 
 ## Prompt 调整
 打开 `server.js`，找到 `buildStoryboardPrompt()` 函数即可修改分析逻辑。

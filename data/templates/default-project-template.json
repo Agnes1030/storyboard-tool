@@ -1,4 +1,5 @@
 {
+  "version": 1,
   "project": {
     "id": "default-project",
     "title": "默认漫剧项目",
@@ -8,14 +9,18 @@
     "createdAt": "2026-04-11T00:00:00.000Z",
     "updatedAt": "2026-04-11T00:00:00.000Z"
   },
-  "global": {
+  "settings": {
     "visualStyle": "日系少年漫",
-    "shotPreference": "均衡分配",
-    "characters": []
+    "shotPreference": "均衡分配"
+  },
+  "global": {
+    "characters": [],
+    "storyContext": ""
   },
   "scenes": [
     {
       "id": "scene-1",
+      "order": 1,
       "title": "雨夜重逢",
       "script": "【第1场】天桥下，深夜，暴雨。林晓：你终于来了。周沉：我没得选。",
       "storyboard": {
@@ -26,7 +31,7 @@
       "notes": "Starter scene placeholder"
     }
   ],
-  "history": [
+  "projectHistory": [
     {
       "type": "project_created",
       "at": "2026-04-11T00:00:00.000Z",
