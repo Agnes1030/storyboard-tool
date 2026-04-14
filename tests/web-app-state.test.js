@@ -184,6 +184,195 @@ test('createAppState getCurrentScene returns the selected scene', () => {
   assert.deepEqual(appState.getCurrentScene(), scenes[1]);
 });
 
+test('createAppState switching currentSceneId swaps selected scene content', () => {
+  const appState = createAppState();
+  const project = {
+    id: 'project-scenes',
+    settings: {
+      currentSceneId: 'scene-1',
+    },
+    scenes: [
+      {
+        id: 'scene-1',
+        title: '开场',
+        script: '第一场剧本',
+        storyboard: {
+          scene_title: '开场',
+          style: '写实电影',
+          total_shots: 1,
+          shots: [{ shot_num: 1, visual_desc: '天台远景' }],
+        },
+      },
+      {
+        id: 'scene-2',
+        title: '转折',
+        script: '第二场剧本',
+        storyboard: {
+          scene_title: '转折',
+          style: '赛博朋克',
+          total_shots: 1,
+          shots: [{ shot_num: 2, visual_desc: '雨夜近景' }],
+        },
+      },
+    ],
+  };
+
+  appState.setProject(project);
+
+  assert.equal(appState.getCurrentSceneScript(), '第一场剧本');
+  assert.deepEqual(appState.getCurrentSceneStoryboard(), project.scenes[0].storyboard);
+  assert.deepEqual(appState.getState().lastShots, project.scenes[0].storyboard.shots);
+  assert.equal(appState.getState().lastStyle, '写实电影');
+  assert.equal(appState.getState().lastSceneTitle, '开场');
+
+  appState.setCurrentSceneId('scene-2');
+
+  assert.equal(appState.getState().currentSceneId, 'scene-2');
+  assert.equal(appState.getState().project.settings.currentSceneId, 'scene-2');
+  assert.equal(appState.getCurrentSceneScript(), '第二场剧本');
+  assert.deepEqual(appState.getCurrentSceneStoryboard(), project.scenes[1].storyboard);
+  assert.deepEqual(appState.getState().lastShots, project.scenes[1].storyboard.shots);
+  assert.equal(appState.getState().lastStyle, '赛博朋克');
+  assert.equal(appState.getState().lastSceneTitle, '转折');
+});
+
+test('createAppState switching currentSceneId updates visible storyboard style state', () => {
+  const appState = createAppState();
+  const project = {
+    id: 'project-styles',
+    settings: {
+      currentSceneId: 'scene-1',
+    },
+    scenes: [
+      {
+        id: 'scene-1',
+        title: '开场',
+        script: '第一场',
+        storyboard: { scene_title: '开场', style: '日系少年漫', shots: [] },
+      },
+      {
+        id: 'scene-2',
+        title: '转折',
+        script: '第二场',
+        storyboard: { scene_title: '转折', style: '赛博朋克', shots: [] },
+      },
+    ],
+  };
+
+  appState.setProject(project);
+  assert.equal(appState.getState().lastStyle, '日系少年漫');
+
+  appState.setCurrentSceneId('scene-2');
+  assert.equal(appState.getState().lastStyle, '赛博朋克');
+});
+
+test('createAppState switching currentSceneId falls back to default visible storyboard style when a scene has no saved style', () => {
+  const appState = createAppState();
+  const project = {
+    id: 'project-style-fallback',
+    settings: {
+      currentSceneId: 'scene-1',
+    },
+    scenes: [
+      {
+        id: 'scene-1',
+        title: '开场',
+        script: '第一场',
+        storyboard: { scene_title: '开场', style: '日系少年漫', shots: [] },
+      },
+      {
+        id: 'scene-2',
+        title: '空场',
+        script: '第二场',
+        storyboard: { scene_title: '空场', shots: [] },
+      },
+    ],
+  };
+
+  appState.setProject(project);
+  assert.equal(appState.getState().lastStyle, '日系少年漫');
+
+  appState.setCurrentSceneId('scene-2');
+  assert.equal(appState.getState().lastStyle, '');
+});
+
+test('createAppState setCurrentSceneScript updates only the selected scene', () => {
+  const appState = createAppState();
+  const project = {
+    id: 'project-script',
+    settings: {
+      currentSceneId: 'scene-2',
+    },
+    scenes: [
+      { id: 'scene-1', title: '开场', script: '第一场剧本', storyboard: { scene_title: '开场', total_shots: 0, shots: [] } },
+      { id: 'scene-2', title: '转折', script: '第二场剧本', storyboard: { scene_title: '转折', total_shots: 0, shots: [] } },
+    ],
+  };
+
+  appState.setProject(project);
+  appState.setCurrentSceneScript('改写后的第二场剧本');
+
+  assert.equal(appState.getCurrentSceneScript(), '改写后的第二场剧本');
+  assert.equal(appState.getState().project.scenes.find((scene) => scene.id === 'scene-1').script, '第一场剧本');
+  assert.equal(appState.getState().project.scenes.find((scene) => scene.id === 'scene-2').script, '改写后的第二场剧本');
+  assert.equal(project.scenes[1].script, '第二场剧本');
+});
+
+test('createAppState stores storyboard state per scene', () => {
+  const appState = createAppState();
+  const project = {
+    id: 'project-storyboard',
+    settings: {
+      currentSceneId: 'scene-1',
+    },
+    scenes: [
+      {
+        id: 'scene-1',
+        title: '开场',
+        script: '第一场剧本',
+        storyboard: {
+          scene_title: '开场',
+          style: '水彩',
+          total_shots: 1,
+          shots: [{ shot_num: 1, visual_desc: '旧版镜头' }],
+        },
+      },
+      {
+        id: 'scene-2',
+        title: '转折',
+        script: '第二场剧本',
+        storyboard: {
+          scene_title: '转折',
+          style: '黑白',
+          total_shots: 1,
+          shots: [{ shot_num: 2, visual_desc: '保留镜头' }],
+        },
+      },
+    ],
+  };
+
+  const updatedStoryboard = {
+    scene_title: '开场新版',
+    style: '胶片',
+    total_shots: 1,
+    shots: [{ shot_num: 3, visual_desc: '新镜头' }],
+  };
+
+  appState.setProject(project);
+  appState.setCurrentSceneStoryboard(updatedStoryboard);
+
+  assert.deepEqual(appState.getCurrentSceneStoryboard(), updatedStoryboard);
+  assert.deepEqual(appState.getState().lastShots, updatedStoryboard.shots);
+  assert.equal(appState.getState().lastStyle, '胶片');
+  assert.equal(appState.getState().project.scenes.find((scene) => scene.id === 'scene-2').storyboard.style, '黑白');
+
+  appState.setCurrentSceneId('scene-2');
+
+  assert.deepEqual(appState.getCurrentSceneStoryboard(), project.scenes[1].storyboard);
+  assert.deepEqual(appState.getState().lastShots, project.scenes[1].storyboard.shots);
+  assert.equal(appState.getState().lastStyle, '黑白');
+});
+
 test('createAppState patches current view and write-mode fields', () => {
   const appState = createAppState();
 

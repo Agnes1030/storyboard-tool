@@ -332,7 +332,7 @@ tr:hover td{background:#fafafa}
         <div class="progress-wrap" id="write-progress"><div class="progress-fill" id="write-progress-fill"></div></div>
         <textarea class="script-area" id="script-editor" placeholder="剧本内容将在这里显示，你也可以直接编辑…
 
-① 左侧选模式和设定  ② 点击生成  ③ 编辑修改  ④ 发送到分镜生成" oninput="updateWC()"></textarea>
+① 左侧选模式和设定  ② 点击生成  ③ 编辑修改  ④ 发送到分镜生成" oninput="handleScriptEditorInput()" onblur="void persistCurrentSceneScriptFromInputs()"></textarea>
         <div class="send-to-storyboard">
           <span style="font-size:12px;color:var(--text-hint)">完成后发送到下一步</span>
           <button class="primary-btn" onclick="sendToStoryboard()">发送到分镜生成 →</button>
@@ -351,7 +351,7 @@ tr:hover td{background:#fafafa}
           <span class="card-title">剧本内容</span>
           <button class="ghost-btn secondary" onclick="switchTab('write')">← 返回编辑</button>
         </div>
-        <textarea class="storyboard-input" id="storyboard-script" placeholder="在此粘贴剧本，或从「剧本创作」页发送过来…"></textarea>
+        <textarea class="storyboard-input" id="storyboard-script" placeholder="在此粘贴剧本，或从「剧本创作」页发送过来…" oninput="handleStoryboardScriptInput()" onblur="void persistCurrentSceneScriptFromInputs()"></textarea>
         <div class="config-bar">
           <span class="config-label">画风</span>
           <select id="style-select">
@@ -501,10 +501,90 @@ async function persistProject(project){
   const savedProject=await saveProject(project);
   return setProjectState(savedProject);
 }
+async function persistAppProjectState(previousProject){
+  try{
+    const savedProject=await saveProject(getProjectState());
+    return setProjectState(savedProject);
+  }catch(error){
+    if(previousProject){
+      setProjectState(previousProject);
+      syncSceneContentInputs();
+    }
+    throw error;
+  }
+}
 function getSceneState(){
   const state=getState();
   const project=getProjectState();
   return {scenes:project?listScenes(project):state.scenes,currentScene:appState.getCurrentScene()};
+}
+function getScriptEditorValue(){
+  return document.getElementById('script-editor').value;
+}
+function setScriptEditorValue(value=''){
+  document.getElementById('script-editor').value=value;
+  updateWC();
+}
+function getStoryboardScriptValue(){
+  return document.getElementById('storyboard-script').value;
+}
+function setStoryboardScriptValue(value=''){
+  document.getElementById('storyboard-script').value=value;
+}
+function syncSceneContentInputs(){
+  const script=appState.getCurrentSceneScript();
+  const storyboard=appState.getCurrentSceneStoryboard()||{};
+  setScriptEditorValue(script);
+  setStoryboardScriptValue(script);
+  const styleSelect=document.getElementById('style-select');
+  if(styleSelect){
+    styleSelect.value=storyboard.style||styleSelect.options[0]?.value||'';
+  }
+  renderStoryboardOutput();
+}
+function renderStoryboardOutput(){
+  renderTableView();
+  renderCardView();
+  renderRhythm();
+
+  const state=getState();
+  const statBarData=createStatBarData({
+    sceneTitle: state.lastSceneTitle,
+    shots: state.lastShots,
+    characters: state.characters,
+  });
+  document.getElementById('stat-bar').innerHTML=`
+    <span>场景：<strong>${statBarData.sceneTitle}</strong></span>
+    <span>总镜数：<strong>${statBarData.totalShots}</strong></span>
+    <span>注入角色：<strong>${statBarData.injectedCharacterCount} 个</strong></span>
+    <span style="margin-left:auto;color:#9ca3af;font-size:11px">${statBarData.modelLabel}</span>
+  `;
+  document.getElementById('output-section').classList.toggle('visible', state.lastShots.length>0);
+}
+async function persistCurrentSceneScriptFromInputs(){
+  const project=getProjectState();
+  const currentSceneId=getState().currentSceneId;
+  if(!project||!currentSceneId)return;
+  const nextScript=getScriptEditorValue();
+  if(nextScript===appState.getCurrentSceneScript())return;
+  appState.setCurrentSceneScript(nextScript);
+  setStoryboardScriptValue(nextScript);
+  try{
+    const savedProject=await saveProject(getProjectState());
+    setProjectState(savedProject);
+  }catch(error){
+    setProjectState(project);
+    syncSceneContentInputs();
+    throw error;
+  }
+}
+function handleScriptEditorInput(){
+  updateWC();
+  setStoryboardScriptValue(getScriptEditorValue());
+}
+function handleStoryboardScriptInput(){
+  const value=getStoryboardScriptValue();
+  setScriptEditorValue(value);
 }
 function getLatestHistoryEntry(type, sceneId){
   const project=getProjectState();
@@ -529,6 +609,7 @@ async function initScenePersistence(){
   try{
     await loadProjectState();
     renderScenePanel();
+    syncSceneContentInputs();
   }catch(error){
     document.getElementById('scene-list').innerHTML='<div class="scene-empty">加载场景失败，请刷新重试。</div>';
     document.getElementById('scene-current-title').textContent='未选择场景';
@@ -541,6 +622,7 @@ async function createSceneFromUi(){
   try{
     await persistProject(createScene(getProjectState(),{title:title.trim()||undefined}));
     renderScenePanel();
+    syncSceneContentInputs();
   }catch(error){
     alert('保存场景失败：'+error.message);
   }
@@ -550,6 +632,7 @@ async function switchSceneFromUi(sceneId){
   try{
     await persistProject(selectScene(getProjectState(),sceneId));
     renderScenePanel();
+    syncSceneContentInputs();
   }catch(error){
     alert('切换场景失败：'+error.message);
   }
@@ -564,6 +647,7 @@ async function renameCurrentSceneFromUi(){
   try{
     await persistProject(renameScene(project,currentScene.id,nextTitle.trim()||currentScene.title));
     renderScenePanel();
+    syncSceneContentInputs();
   }catch(error){
     alert('重命名场景失败：'+error.message);
   }
@@ -584,6 +668,7 @@ async function rollbackProjectFromUi(){
   try{
     setProjectState(await rollbackProjectSnapshot(latestProjectSnapshot.id));
     renderScenePanel();
+    syncSceneContentInputs();
   }catch(error){
     alert('项目回退失败：'+error.message);
   }
@@ -607,6 +692,7 @@ async function rollbackSceneFromUi(){
   try{
     setProjectState(await rollbackSceneSnapshot(currentSceneId, latestSceneSnapshot.id));
     renderScenePanel();
+    syncSceneContentInputs();
   }catch(error){
     alert('场景回退失败：'+error.message);
   }
@@ -647,31 +733,20 @@ function setView(v){
 
 // ══ Render shots ══
 function renderShots(result){
-  appState.setStoryboardResult({
+  const previousProject=getProjectState();
+  appState.setCurrentSceneStoryboard({
+    ...(appState.getCurrentSceneStoryboard() || {}),
+    ...result,
     shots: result.shots || [],
     style: document.getElementById('style-select').value,
-    sceneTitle: result.scene_title || '未命名',
+    scene_title: result.scene_title || result.sceneTitle || appState.getCurrentScene()?.title || '未命名',
   });
 
-  renderTableView();
-  renderCardView();
-  renderRhythm();
-
-  const state=getState();
-  const statBarData=createStatBarData({
-    sceneTitle: state.lastSceneTitle,
-    shots: state.lastShots,
-    characters: state.characters,
-  });
-  document.getElementById('stat-bar').innerHTML=`
-    <span>场景：<strong>${statBarData.sceneTitle}</strong></span>
-    <span>总镜数：<strong>${statBarData.totalShots}</strong></span>
-    <span>注入角色：<strong>${statBarData.injectedCharacterCount} 个</strong></span>
-    <span style="margin-left:auto;color:#9ca3af;font-size:11px">${statBarData.modelLabel}</span>
-  `;
+  renderStoryboardOutput();
   const sec=document.getElementById('output-section');
   sec.classList.add('visible');
   sec.scrollIntoView({behavior:'smooth',block:'start'});
+  void persistAppProjectState(previousProject);
 }
 
 function renderTableView(){
@@ -813,13 +888,13 @@ function setMode(m){
 function setGenre(el,g){appState.patch({ currentGenre: g });document.querySelectorAll('.genre-chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');}
 function setTone(el,t){appState.patch({ currentTone: t });document.querySelectorAll('.tone-chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');}
 function setPolishDir(el,d){appState.patch({ currentPolishDir: d });document.querySelectorAll('.tone-chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');}
-function updateWC(){document.getElementById('script-wc').textContent=document.getElementById('script-editor').value.length+' 字';}
-function clearScript(){if(confirm('确认清空剧本？')){document.getElementById('script-editor').value='';updateWC();}}
-function copyScript(){navigator.clipboard.writeText(document.getElementById('script-editor').value);}
+function updateWC(){document.getElementById('script-wc').textContent=getScriptEditorValue().length+' 字';}
+function clearScript(){if(confirm('确认清空剧本？')){setScriptEditorValue('');setStoryboardScriptValue('');void persistCurrentSceneScriptFromInputs();}}
+function copyScript(){navigator.clipboard.writeText(getScriptEditorValue());}
 function sendToStoryboard(){
-  const s=document.getElementById('script-editor').value.trim();
+  const s=getScriptEditorValue().trim();
   if(!s){alert('剧本内容为空');return;}
-  document.getElementById('storyboard-script').value=s;
+  setStoryboardScriptValue(s);
   switchTab('storyboard');
 }
 
@@ -828,7 +903,7 @@ async function runWrite(){
   const errBox=document.getElementById('write-error');
   const state=getState();
   errBox.style.display='none';
-  const existing=document.getElementById('script-editor').value.trim();
+  const existing=getScriptEditorValue().trim();
   if((state.currentMode==='continue'||state.currentMode==='polish')&&!existing){errBox.textContent='请先在编辑器中输入已有剧本';errBox.style.display='block';return;}
   btn.disabled=true;document.getElementById('write-spinner').style.display='block';
   const L={generate:'生成中…',outline:'规划中…',continue:'续写中…',polish:'润色中…'};
@@ -840,9 +915,10 @@ async function runWrite(){
     const res=await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     const data=await res.json();
     if(data.error) throw new Error(data.error);
-    if(state.currentMode==='continue') document.getElementById('script-editor').value+='\n\n'+data.text;
-    else document.getElementById('script-editor').value=data.text;
-    updateWC();
+    const nextScript=state.currentMode==='continue'?[existing,data.text].filter(Boolean).join('\n\n'):data.text;
+    setScriptEditorValue(nextScript);
+    setStoryboardScriptValue(nextScript);
+    await persistCurrentSceneScriptFromInputs();
   }catch(e){errBox.textContent='生成失败：'+e.message;errBox.style.display='block';}
   finally{
     finishProgress('write-progress','write-progress-fill');
