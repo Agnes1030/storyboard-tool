@@ -1,0 +1,17 @@
+[
+  {
+    "id": "balanced",
+    "label": "均衡分配",
+    "description": "在全景、中景、近景之间保持均衡节奏。"
+  },
+  {
+    "id": "close-up-focus",
+    "label": "偏重近景特写",
+    "description": "优先使用近景和特写强化人物情绪。"
+  },
+  {
+    "id": "wide-focus",
+    "label": "偏重全景远景",
+    "description": "优先使用全景和远景建立空间与氛围。"
+  }
+]
